@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quake3-server
+  namespace: q3atwork
+  labels:
+    app: quake3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quake3
+  template:
+    metadata:
+      labels:
+        app: quake3
+    spec:
+      containers:
+      - name: quake3
+        image: <REPO_URL>/quake3atwork:v0.2.0
+        ports:
+        - containerPort: 27960
+          protocol: UDP
+        resources:
+          limits:
+            memory: "500Mi"
+            cpu: "200m"
+        env:
+        - name: IOQ3_RCON_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: quake3
+              key: IOQ3_RCON_PASSWORD
+      - name: q3http
+        image: <REPO_URL>/q3http:v0.2.0
+        ports:
+        - containerPort: 8088
+          protocol: TCP
+        resources:
+          limits:
+            memory: "50Mi"
+            cpu: "20m"
+        env:
+        - name: IOQ3_RCON_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: quake3
+              key: IOQ3_RCON_PASSWORD
+      nodeSelector:
+        kubernetes.io/arch: "amd64"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quake3-server
+  namespace: q3atwork
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: external
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+    service.beta.kubernetes.io/load-balancer-source-ranges: 10.0.0.0/8
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: http
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-port: "8088"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: /health
+spec:
+  type: LoadBalancer
+  selector:
+    app: quake3
+  ports:
+    - name: q3-udp
+      protocol: UDP
+      port: 27960
+      targetPort: 27960
+    #- name: http
+    #  protocol: TCP
+    #  port: 8080
+    #  targetPort: 8088
