@@ -10,5 +10,3 @@ USER quakeserver
 
 ENTRYPOINT ["/bin/sh"]
 CMD ["/usr/local/ioquake3/start_server.sh"]
-
-
